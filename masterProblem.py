@@ -11,8 +11,8 @@ def master_problem(m, n_r,n, A, cost1):
     
     # create a dictionary of pulp variables with keys from ingredients
     ## the default lower bound is -inf
-    lam = pulp.LpVariable.dict('lam%s', routes, lowBound =0, upBound = 1.0, cat = "Integer")
-    y = pulp.LpVariable.dict('y%s', nodes, lowBound =0, upBound = 1.0)
+    lam = pulp.LpVariable.dict('lam%s', routes, lowBound =0, upBound = 1.0, cat = 'Integer')
+    y = pulp.LpVariable.dict('y%s', nodes, lowBound =0, upBound = 1.0, cat = 'Integer')
     
     ## cost data
     cost2 = dict(zip(nodes, [10 for x in range(len(nodes))]))
@@ -24,10 +24,10 @@ def master_problem(m, n_r,n, A, cost1):
     
     ##note these are constraints and not an objective as there is a equality/inequality
     for node in nodes:
-        master_problem += sum([A[route, node]*lam[route] for route in routes]) + y[node] == 1.0
+        master_problem += sum([A[route, node]*lam[route] for route in routes]) + y[node] >= 1.0
               
     for i in range(m):
-        master_problem += sum(lam[routes[n_r*i+j]] for j in range(n_r)) == 1
+        master_problem += sum(lam[routes[n_r*i+j]] for j in range(n_r)) <= 1
                               
     
         

@@ -14,7 +14,7 @@ def dual_problem(n_c, n_r, n_n, A, c, d):
     # create a dictionary of pulp variables with keys from ingredients
     ## the default lower bound is -inf
     pi = pulp.LpVariable.dict('pi%s', nodes, lowBound = 0)
-    gamma = pulp.LpVariable.dict('gamma%s', cars)
+    gamma = pulp.LpVariable.dict('gamma%s', cars, upBound = 0)
     
     
     ## create the objective
@@ -32,7 +32,6 @@ def dual_problem(n_c, n_r, n_n, A, c, d):
     for node in nodes:
         dual_problem += pi[node] <= d[node]
                               
-    
     dual_problem.writeLP("dual.lp")   
     ##problem is then solved with the default solver
     dual_problem.solve()

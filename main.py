@@ -1,5 +1,3 @@
-"""just a comment"""
-
 import pulp
 import time
 import itertools
@@ -47,7 +45,7 @@ for node in nodes:
     d[node] = 10
 
 
-while red_cost <0 and i<20:  
+while red_cost <0 and i<15:  
     pi, gamma = dual_problem(3,i+1,4,A, c, d)
     print("pi: %s" % [pi["n5"].value(), pi["n6"].value(), pi["n7"].value(), pi["n8"].value()])
     print("gamma: %s" % [gamma["c1"].value(), gamma["c2"].value(), gamma["c2"].value()])

@@ -29,13 +29,13 @@ def sub_problem(n, k, m, pi, gamma, t):
     
     # create a dictionary of pulp variables with keys from ingredients
     ## the default lower bound is -inf
-    H = pulp.LpVariable.dict('H%s', d_nodes, lowBound = 0, upBound = T)
+    H = pulp.LpVariable.dict('H_%s', d_nodes, lowBound = 0, upBound = T)
     x = pulp.LpVariable.dict('x', (nodes, nodes), lowBound = 0, upBound = 1, cat = "Integer")
-    B = pulp.LpVariable.dict('B%s', nodes, lowBound = 0, upBound = T)
-    Q = pulp.LpVariable.dict('Q%s', nodes, lowBound = 0, upBound = 2)
+    B = pulp.LpVariable.dict('B_%s', nodes, lowBound = 0, upBound = T)
+    Q = pulp.LpVariable.dict('Q_%s', nodes, lowBound = 0, upBound = 2)
         
     ## create the objective
-    sub_problem += sum([H[i] for i in d_nodes]) + sum([(B[i]) for i in o_nodes]) + n - sum([pi[i].value()*x[(i,j)] for i in d_nodes for j in nodes]) + 0.000001*B[z_nodes[0]] - sum([pi[i].value() for i in d_nodes]) - gamma['c%i' % (k+1)].value()
+    sub_problem += sum([H[i] for i in d_nodes]) + sum([(B[i]) for i in o_nodes]) + 0.000001*B[z_nodes[0]] - sum([pi[i].value()*x[(i,j)] for i in d_nodes for j in nodes]) - gamma['c%i' % (k+1)].value()  
         
      
     
@@ -87,7 +87,7 @@ def sub_problem(n, k, m, pi, gamma, t):
         print("%s: %s" % (node, B[node].value()))
 
     red_cost = sub_problem.objective.value()
-    cost = sum([H[i].value() for i in d_nodes]) + sum([B[i].value() for i in o_nodes]) 
+    cost = sum([H[i].value() for i in d_nodes]) + sum([B[i].value() for i in o_nodes]) + 0.000001*B[z_nodes[0]].value()
 #    print("cost: %s" % cost)
 #    print("redcost: %s" % red_cost)
     return(x,B,H,red_cost, cost)
