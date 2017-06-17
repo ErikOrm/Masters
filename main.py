@@ -8,7 +8,7 @@ from subproblem import *
 from masterProblem import *
 
 routes = ['r11', 'r21', 'r31']
-nodes = ['n%i' % (i+1) for i in range(11)]
+nodes = ['n%i' % (i+1) for i in range(12)]
 
 t = {(node1, node2) : 30 for node1 in nodes for node2 in nodes}
 
