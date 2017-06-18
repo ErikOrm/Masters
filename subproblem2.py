@@ -2,15 +2,11 @@ import pulp
 import math
 
 
-def sub_problem2(n, car, m, pi, gamma, t):
+def sub_problem2(n, car, m, pi, gamma, t, T, err_penalty):
     
     
     #initialise the model
-    
-    T = 20
-    startTime = 0
-    M = 30
-    
+
     # sets
     o_nodes = ["n%i" % (i+1) for i in range(n)]
     d_nodes = ["n%i" % (i+1) for i in range(n,2*n)]
@@ -34,14 +30,12 @@ def sub_problem2(n, car, m, pi, gamma, t):
     while added:
         added = False
         for i in free_nodes:
-            print("i:%i" % i)
             o = o_nodes[i]
             d = d_nodes[i]
             best_cost = 0
             best_path = path
             for j in range(1,len(path)):
                 for k in range(j,len(path)):
-                    print("j,k: %i%i" % (j,k))
                     tmp_cost = 0
                     tmp_path = path[:j] + [o] + path[j:k] + [d] + path[k:]
                     tmp_Q = 0
@@ -52,14 +46,14 @@ def sub_problem2(n, car, m, pi, gamma, t):
                         if tmp_Q >= 4:
                             fail = 1
                     if fail:
-                        tmp_cost = 1000
+                        tmp_cost = err_penalty
                     else:
                         for l in range(len(tmp_path)-1):
                             time = time + t[(tmp_path[l],tmp_path[l+1])]
                             if tmp_path[l+1] in d_nodes:
                                 tmp_cost = tmp_cost + time - pi[tmp_path[l+1]].value()
-                    print(tmp_cost)
-                    print(tmp_path)
+                        if time > T:
+                            tmp_cost = err_penalty
                     if tmp_cost < best_cost:
                         best_cost = tmp_cost
                         best_path = tmp_path
@@ -70,9 +64,10 @@ def sub_problem2(n, car, m, pi, gamma, t):
                 added = True
                 break
     c = 0
+    time = 0
     for i in range(len(path)-1):
         time = time + t[(path[i],path[i+1])]
-        if tmp_path[l+1] in d_nodes:
-            c = tmp_cost + time
-
+        if path[i+1] in d_nodes:
+            c = c + time
+            
     return(path, cost-gamma['c%i' % (car+1)].value(), c)

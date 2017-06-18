@@ -7,7 +7,7 @@ def dual_problem(n_c, n_r, n_n, A, c, d):
     dual_problem = pulp.LpProblem('The Dual Problem', pulp.LpMaximize)
     
     # sets
-    routes = ["r%i%i" % (i+1, j+1) for i in range(n_c) for j in range(n_r)]
+    routes = ["r%i_%i" % (i+1, j+1) for i in range(n_c) for j in range(n_r)]
     nodes = ["n%i" % (i+1+n_n) for i in range(n_n)]
     cars = ["c%i" % (i+1) for i in range(n_c)]
     
@@ -19,8 +19,6 @@ def dual_problem(n_c, n_r, n_n, A, c, d):
     
     ## create the objective
     dual_problem += sum([pi[i] for i in nodes]) + sum([gamma[j] for j in cars])
-    
-    ## ingredient parameters
     
     
     ##note these are constraints and not an objective as there is a equality/inequality
@@ -35,17 +33,6 @@ def dual_problem(n_c, n_r, n_n, A, c, d):
     dual_problem.writeLP("dual.lp")   
     ##problem is then solved with the default solver
     dual_problem.solve()
-#    
-#    
-#    ##print the result
-#    for node in nodes:
-#        print('pi: %s is: %s'%(node, pi[node].value()))
-#    #    for i in range(n):
-#    #        print(A[route,'n%i'%(i+1)])
-#    
-#    for car in cars:
-#        print('gamma: %s is: %s'%(car, gamma[car].value()))
-#        
-#    print(dual_problem.objective.value())
-#    
+
+   
     return(pi, gamma)

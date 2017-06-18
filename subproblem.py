@@ -1,5 +1,5 @@
 import pulp
-import math
+
 
 
 def sub_problem(n, k, m, pi, gamma, t):
@@ -8,9 +8,9 @@ def sub_problem(n, k, m, pi, gamma, t):
     #initialise the model
     sub_problem = pulp.LpProblem('The Dual Problem', pulp.LpMinimize)
     
-    T = 20
+    T = 1000 # 20
     startTime = 0
-    M = 30
+    M = 2000
     
     # sets
     o_nodes = ["n%i" % (i+1) for i in range(n)]
@@ -37,8 +37,7 @@ def sub_problem(n, k, m, pi, gamma, t):
     ## create the objective
     sub_problem += sum([H[i] for i in d_nodes]) + sum([(B[i]) for i in o_nodes]) + 0.000001*B[z_nodes[0]] - sum([pi[i].value()*x[(i,j)] for i in d_nodes for j in nodes]) - gamma['c%i' % (k+1)].value()  
         
-     
-    
+         
     ## subject to
     sub_problem += sum([x[(k_nodes[k], j)] for j in o_nodes+d_nodes+z_nodes]) == 1
     for i in nodes:
@@ -70,7 +69,7 @@ def sub_problem(n, k, m, pi, gamma, t):
     
     ##problem is then solved with the default solver
     sub_problem.solve()
-    sub_problem.roundSolution()
+    #sub_problem.roundSolution()
     
     
     print(sub_problem.objective.value())
