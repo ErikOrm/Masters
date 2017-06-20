@@ -2,7 +2,7 @@ import pulp
 
 
 
-def sub_problem(n, k, m, pi, gamma, t, T, M):
+def sub_problem_label(n, k, m, pi, gamma, t, T, M):
     
     
     #initialise the model

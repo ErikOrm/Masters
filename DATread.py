@@ -60,16 +60,5 @@ def getT2(seed, n_vehicles, n_customers, M):
                 vec2 = np.array([x[j], y[j]])
                 t[("n%i" % (i+1), "n%i" % (j+1))] = np.linalg.norm(vec1-vec2,2)
         t[("n%i" % (i+1), nodes[-1])] = 0
-    
-    print(nodes)
-    print(s_nodes)
-    print(e_nodes)
-    
-    print(t)
-    return t
-    
-    
-    
-    
-getT2(56, 1,2,1000)
-    
+
+    return t    

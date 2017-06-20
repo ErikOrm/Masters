@@ -1,96 +1,68 @@
+import pulp
+import time
+import itertools
+import math
 import random
 from dualProblem import *
 from subproblem import *
 from masterProblem import *
 from DATread import *
 
-routes = ['r11', 'r21', 'r31']
-nodes = ['n%i' % (i+1) for i in range(12)]
+n_vehicles = 3
+n_customers = 4
+d_val = 200
+T = 200
+err_penalty = 3000
+seed = 10
+t = getT2(seed, n_vehicles, n_customers, T+1)
+n_iter = 500
 
-t = getT()
-#
-#t = {(node1, node2) : 30 for node1 in nodes for node2 in nodes}
-#
-#for node in nodes:
-#    if node != 'n12':
-#        t[(node, 'n12')] = 0
-#          
-#for node1 in nodes:
-#    for node2 in nodes:
-#        if not node2 in ['n9', 'n10', 'n11', 'n12'] and node1 != node2 and node1 != 'n12':
-#            t[(node1, node2)] = random.random()
+routes = ['r%i_1' % (i+1) for i in range(n_vehicles)]
+nodes = ['n%i' % (i+1) for i in range(2*n_customers + n_vehicles + 1)]
 
 A = {(route, node): 0 for route in routes for node in nodes}
-A[('r11', 'n9')] = 1
-A[('r11', 'n12')] = 1
-A[('r21', 'n10')] = 1
-A[('r21', 'n12')] = 1
-A[('r31', 'n11')] = 1
-A[('r31', 'n12')] = 1
-
-B = {}
-H = {}
-  
 
 red_costs = []
 red_cost = -1
-i = 0
 c = {}
 d = {}
-c['r11'] = 0
-c['r21'] = 0
-c['r31'] = 0
 
-d_val = 1000
+for i in range(n_vehicles):
+    A[('r%i_1' % (i+1), 'n%i' % (2*n_customers+i+1))] = 1
+    A[('r%i_1' % (i+1), 'n%i' % (2*n_customers+n_vehicles+1))] = 1
+    c['r%i_1' % (i+1)] = 0
+
+
 for node in nodes:
     d[node] = d_val
 
-
-while red_cost <0 and i<25:  
-    pi, gamma = dual_problem(3,i+1,4,A, c, d)
-    print("pi: %s" % [pi["n5"].value(), pi["n6"].value(), pi["n7"].value(), pi["n8"].value()])
-    print("gamma: %s" % [gamma["c1"].value(), gamma["c2"].value(), gamma["c3"].value()])
-    print('ROUTE: r1%i' % (i+2))
-    x1, B1, H1, r_cost1, cost1 = sub_problem(4,0,3,pi, gamma, t)
-    print('ROUTE: r2%i' % (i+2))
-    x2, B2, H2, r_cost2, cost2 = sub_problem(4,1,3,pi, gamma, t)
-    print('ROUTE: r3%i' % (i+2))
-    x3, B3, H3, r_cost3, cost3 = sub_problem(4,2,3,pi, gamma, t)
-    for node in nodes:
-        A[('r1%i' % (i+2), node)] = 0
-        A[('r2%i' % (i+2), node)] = 0
-        A[('r3%i' % (i+2), node)] = 0
+it = 0
+while red_cost <0 and it<n_iter:  
+    pi, gamma = dual_problem(n_vehicles, it+1, n_customers, A, c, d)
+    print("pi: %s" % [pi["n%i" % (n_customers + i + 1)].value() for i in range(n_customers)])
+    print("gamma: %s" % [gamma["c%i" % (i+1)].value() for i in range(n_vehicles)])
     
-    for node1 in nodes:
-        for node2 in nodes:
-            if x1[(node1, node2)].value() == 1:
-                if A[('r1%i' % (i+2), node1)] == 0:
-                    A[('r1%i' % (i+2), node1)] = 1
-                else:
-                    raise(Exception)
-            if x2[(node1, node2)].value() == 1:
-                if A[('r2%i' % (i+2), node1)] == 0:
-                    A[('r2%i' % (i+2), node1)] = 1
-                else:
-                    raise(Exception)
-            if x3[(node1, node2)].value() == 1:
-                if A[('r3%i' % (i+2), node1)] == 0:
-                    A[('r3%i' % (i+2), node1)] = 1
-                else:
-                    raise(Exception)
-    A[('r1%i' % (i+2), 'n12')] = 1
-    A[('r2%i' % (i+2), 'n12')] = 1
-    A[('r3%i' % (i+2), 'n12')] = 1
-      
-    c['r1%i' % (i+2)] = cost1
-    c['r2%i' % (i+2)] = cost2
-    c['r3%i' % (i+2)] = cost3
-    
-      
-    i = i+1
-    red_cost = min([r_cost1, r_cost2, r_cost3])
+    x = {}
+    path = {}
+    r_cost = {}
+    cost = {}
+    for i in range(n_vehicles):
+        print('ROUTE: r%i_%i' % (i+1, it+2))
+        x[(i+1)], r_cost[(i+1)], cost[(i+1)] = sub_problem(n_customers, i, n_vehicles, pi, gamma, t, T, err_penalty)
+        for node in nodes:
+            A[('r%i_%i' % (i+1, it+2), node)] = 0
+        for node1 in nodes:
+            for node2 in nodes:
+                if x[(i+1)][(node1,node2)].value() == 1: 
+                    A[('r%i_%i' % (i+1, it+2), node1)] = 1
+        A[('r%i_%i' % (i+1, it+2), nodes[-1])] = 1
+        c['r%i_%i' % (i+1, it+2)] = cost[(i+1)]
+          
+    it = it+1
+    red_cost = max([r_cost[(i+1)] for i in range(n_vehicles)])
     red_costs.append(red_cost)
     print("redcost: %s" % red_cost)
 
-master_problem(3, (i+1),4, A, c, d_val)
+master_problem(n_vehicles, (it+1),n_customers, A, c, d_val)
+
 

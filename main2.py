@@ -8,12 +8,13 @@ from subproblem2 import *
 from masterProblem import *
 from DATread import *
 
-n_vehicles = 10
-n_customers = 50
-d_val = 400
-T = 300
+n_vehicles = 3
+n_customers = 4
+d_val = 200
+T = 200
 err_penalty = 3000
-t = getT2(1, n_vehicles, n_customers, T+1)
+seed = 6
+t = getT2(seed, n_vehicles, n_customers, T+1)
 n_iter = 500
 
 routes = ['r%i_1' % (i+1) for i in range(n_vehicles)]

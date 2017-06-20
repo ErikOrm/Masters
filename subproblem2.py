@@ -63,6 +63,48 @@ def sub_problem2(n, car, m, pi, gamma, t, T, err_penalty):
                 free_nodes.remove(i)
                 added = True
                 break
+            
+            
+    inc_nodes = [node for node in path if node in o_nodes]
+    for node1 in inc_nodes:
+        path_copy = path.copy()
+        node2 = d_nodes[o_nodes.index(node1)]
+        path_copy.remove(node1)
+        path_copy.remove(node2)
+        best_cost = 0
+        best_path = path_copy
+        for j in range(1,len(path_copy)):
+            for k in range(j,len(path_copy)):
+                tmp_cost = 0
+                tmp_path = path_copy[:j] + [node1] + path_copy[j:k] + [node2] + path_copy[k:]
+                tmp_Q = 0
+                fail = 0
+                time = 0
+                for node in tmp_path:
+                    tmp_Q = tmp_Q + q[node]
+                    if tmp_Q >= 4:
+                        fail = 1
+                if fail:
+                    tmp_cost = err_penalty
+                else:
+                    for l in range(len(tmp_path)-1):
+                        time = time + t[(tmp_path[l],tmp_path[l+1])]
+                        if tmp_path[l+1] in d_nodes:
+                            tmp_cost = tmp_cost + time - pi[tmp_path[l+1]].value()
+                    if time > T:
+                        tmp_cost = err_penalty
+                if tmp_cost < best_cost:
+                    best_cost = tmp_cost
+                    best_path = tmp_path
+        if best_cost < cost:
+            path = best_path
+            cost = best_cost
+        
+        
+        
+            
+    
+            
     c = 0
     time = 0
     for i in range(len(path)-1):
