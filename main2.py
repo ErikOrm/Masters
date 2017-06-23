@@ -13,7 +13,7 @@ n_customers = 4
 d_val = 200
 T = 200
 err_penalty = 3000
-seed = 6
+seed = 34
 t = getT2(seed, n_vehicles, n_customers, T+1)
 n_iter = 500
 

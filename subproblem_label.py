@@ -1,90 +1,74 @@
-import pulp
 
+from DATread import *
 
-
-def sub_problem_label(n, k, m, pi, gamma, t, T, M):
-    
-    
-    #initialise the model
-    sub_problem = pulp.LpProblem('The Dual Problem', pulp.LpMinimize)
-    
-    startTime = 0
+class label():
+    def __init__(self, parent, node, time, load, cost, open_requests, unreachable, label_dict):
+        self.parent = parent
+        self.node = node
+        self.time = time
+        self.load = load
+        self.cost = cost
+        self.open_requests = open_requests
+        self.unreachable = unreachable
+        self.label_dict = label_dict
         
-    # sets
-    o_nodes = ["n%i" % (i+1) for i in range(n)]
-    d_nodes = ["n%i" % (i+1) for i in range(n,2*n)]
-    k_nodes = ["n%i" % (i+1) for i in range(2*n, 2*n+m)]
-    z_nodes = ["n%i" % (2*n+m+1)]
-    nodes =  o_nodes + d_nodes + k_nodes + z_nodes
-    
-    
-    #t = {(i,j):1 for i in nodes for j in nodes}
-    q = {i:0 for i in nodes}
-    for i in o_nodes:
-        q[i] = 1
-    for i in d_nodes:
-        q[i] = - 1
-    
-    # create a dictionary of pulp variables with keys from ingredients
-    ## the default lower bound is -inf
-    H = pulp.LpVariable.dict('H_%s', d_nodes, lowBound = 0, upBound = T)
-    x = pulp.LpVariable.dict('x', (nodes, nodes), lowBound = 0, upBound = 1, cat = "Integer")
-    B = pulp.LpVariable.dict('B_%s', nodes, lowBound = 0, upBound = T)
-    Q = pulp.LpVariable.dict('Q_%s', nodes, lowBound = 0, upBound = 2)
+    def extend(self, n, m, Q, t, T, pi):
+        for req in self.open_requests:
+            tmp_node = "n%i" % (req + n + 1)
+            tmp_time = self.time + t[("n%i" % (self.node + 1), tmp_node)]
+            tmp_load = self.load - 1
+            if (tmp_time < T):
+                tmp_cost = self.cost + self.time - pi[tmp_node]
+                tmp_open_req = self.open_requests.copy()
+                tmp_open_req.remove(req)
+                tmp_unreachable = self.unreachable.copy()
+                self.label_dict[(req + n, 'untreated')].append( label(self.node, req + n, tmp_time, tmp_load, tmp_cost, tmp_open_req, tmp_unreachable, self.label_dict))
+                
+        for req in [i for i in range(n) if not i in self.unreachable]:
+            tmp_node = "n%i" % (req +1)
+            tmp_time = self.time + t[("n%i" % (self.node + 1), tmp_node)]
+            tmp_load = self.load + 1
+            if (tmp_load < Q) and (tmp_time < T):
+                tmp_cost = self.cost
+                tmp_open_req = self.open_requests.copy()
+                tmp_open_req.add(req)
+                tmp_unreachable = self.unreachable.copy()
+                tmp_unreachable.add(req)
+                self.label_dict[(req, 'untreated')].append(label(self.node, req, tmp_time, tmp_load, tmp_cost, tmp_open_req, self.unreachable, self.label_dict))
+                
+        if not self.open_requests:
+            self.label_dict[(2*n+m, 'treated')].append(label(self.node, (2*n+m+1), self.time, self.load, self.cost, self.open_requests, self.unreachable, self.label_dict))
+        self.label_dict[(self.node, 'treated')].append(self)
+        self.label_dict[(self.node, 'untreated')].remove(self)
         
-    ## create the objective
-    sub_problem += sum([H[i] for i in d_nodes]) + sum([(B[i]) for i in o_nodes]) + 0.000001*B[z_nodes[0]] - sum([pi[i].value()*x[(i,j)] for i in d_nodes for j in nodes]) - gamma['c%i' % (k+1)].value()  
         
-         
-    ## subject to
-    sub_problem += sum([x[(k_nodes[k], j)] for j in o_nodes+d_nodes+z_nodes]) == 1
-    for i in nodes:
-        for j in k_nodes:
-            sub_problem += x[(i, j)] == 0
-    sub_problem += sum([x[(i, z_nodes[0])] for i in o_nodes+d_nodes+k_nodes]) == 1
-    sub_problem += sum([x[(z_nodes[0], j)] for j in nodes]) == 0
-    
-    for i in o_nodes + d_nodes:
-        sub_problem += sum([x[(j, i)] for j in [s for s in nodes if s != i]]) - sum([x[(i, j)] for j in [s for s in nodes if s != i]]) == 0
-    
-    for i in range(len(o_nodes)):
-        sub_problem += sum([x[(o_nodes[i], j)] for j in [s for s in nodes if s != i]]) - sum([x[(d_nodes[i], j)] for j in [s for s in nodes if s != i]]) == 0
-    
-    sub_problem += B[k_nodes[k]] >= startTime
-    
-    for i in [s for s in nodes if not s in z_nodes]:
-        for j in [s for s in nodes if not s in k_nodes]:
-            sub_problem += B[j] >= B[i] + t[(i,j)] - M*(1-x[(i,j)])
-            
-    for i in [s for s in nodes if not s in z_nodes]:
-        for j in [s for s in nodes if not s in k_nodes]:
-            sub_problem += Q[j] >= Q[i] + q[j] - 5*(1-x[(i,j)])
-    
-    for i in range(len(d_nodes)):
-        sub_problem += H[d_nodes[i]] == B[d_nodes[i]] - B[o_nodes[i]]
-    
-    sub_problem.writeLP("sub.lp")
-    
-    ##problem is then solved with the default solver
-    sub_problem.solve()
-    #sub_problem.roundSolution()
-    
-    
-    print(sub_problem.objective.value())
-    
-    for node_1 in nodes:
-        for node_2 in nodes:
-            try:
-                if x[(node_1, node_2)].value() == 1:
-                    print("%s %s: %i" %(node_1, node_2, x[(node_1, node_2)].value()))
-            except:
-                print("%s %s:" %(node_1, node_2))
-            
-    for node in nodes:
-        print("%s: %s" % (node, B[node].value()))
 
-    red_cost = sub_problem.objective.value()
-    cost = sum([H[i].value() for i in d_nodes]) + sum([B[i].value() for i in o_nodes]) + 0.000001*B[z_nodes[0]].value()
-#    print("cost: %s" % cost)
-#    print("redcost: %s" % red_cost)
-    return(x, red_cost, cost)
+
+
+def sub_problem_label(n, k, m, pi, gamma, t, T, Qmax):
+    
+    label_dict = {(i, j):[] for i in range(2*n+m+1) for j in ['untreated','treated']}
+    label_dict[(2*n+k, 'untreated')].append(label(None, 2*n+k, 0, 0, 0, set(), set(), label_dict))
+    
+    cont = True
+    while  cont:
+        cont = False
+        for i in range(2*n+m+1):
+            if label_dict[(i, 'untreated')]:
+                cont = True
+                for lab in label_dict[(i, 'untreated')]:
+                    lab.extend(n, m, Qmax, t, T, pi)
+                    
+    return label_dict
+    
+m = 2
+n = 3
+pi = {"n%i" % (i+1):200 for i in range(3,6)}
+gamma = {"c%i" % (i+1):0 for i in range(2)}
+T = 1000
+seed = 34
+t = getT2(seed, n_vehicles, n_customers, T+1)
+Qmax = 2
+A = sub_problem_label(n, 0, m, pi, gamma, t, T, Qmax)
+
+path = [11]

@@ -2,11 +2,11 @@ import pulp
 
 
 
-def sub_problem(n, k, m, pi, gamma, t, T, M):
+def sub_problem(n, k, m, pi, gamma, t, T, Qmax, M):
     
     
     #initialise the model
-    sub_problem = pulp.LpProblem('The Dual Problem', pulp.LpMinimize)
+    sub_problem = pulp.LpProblem('The Sub Problem', pulp.LpMinimize)
     
     startTime = 0
         
@@ -30,7 +30,7 @@ def sub_problem(n, k, m, pi, gamma, t, T, M):
     H = pulp.LpVariable.dict('H_%s', d_nodes, lowBound = 0, upBound = T)
     x = pulp.LpVariable.dict('x', (nodes, nodes), lowBound = 0, upBound = 1, cat = "Integer")
     B = pulp.LpVariable.dict('B_%s', nodes, lowBound = 0, upBound = T)
-    Q = pulp.LpVariable.dict('Q_%s', nodes, lowBound = 0, upBound = 2)
+    Q = pulp.LpVariable.dict('Q_%s', nodes, lowBound = 0, upBound = Qmax)
         
     ## create the objective
     sub_problem += sum([H[i] for i in d_nodes]) + sum([(B[i]) for i in o_nodes]) + 0.000001*B[z_nodes[0]] - sum([pi[i].value()*x[(i,j)] for i in d_nodes for j in nodes]) - gamma['c%i' % (k+1)].value()  
