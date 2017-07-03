@@ -13,7 +13,8 @@ n_customers = 4
 d_val = 200
 T = 200
 err_penalty = 3000
-seed = 34
+Q_max = 4
+seed = 15
 t = getT2(seed, n_vehicles, n_customers, T+1)
 n_iter = 500
 
@@ -48,7 +49,7 @@ while red_cost <0 and it<n_iter:
     cost = {}
     for i in range(n_vehicles):
         print('ROUTE: r%i_%i' % (i+1, it+2))
-        x[(i+1)], r_cost[(i+1)], cost[(i+1)] = sub_problem(n_customers, i, n_vehicles, pi, gamma, t, T, err_penalty)
+        x[(i+1)], r_cost[(i+1)], cost[(i+1)] = sub_problem(n_customers, i, n_vehicles, pi, gamma, t, T, Q_max, err_penalty)
         for node in nodes:
             A[('r%i_%i' % (i+1, it+2), node)] = 0
         for node1 in nodes:

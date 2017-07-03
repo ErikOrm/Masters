@@ -30,7 +30,6 @@ def dual_problem(n_c, n_r, n_n, A, c, d):
     for node in nodes:
         dual_problem += pi[node] <= d[node]
                               
-    dual_problem.writeLP("dual.lp")   
     ##problem is then solved with the default solver
     dual_problem.solve()
 
