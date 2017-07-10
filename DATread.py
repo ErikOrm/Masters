@@ -42,15 +42,15 @@ def getT():
     
     
     
-def getT2(seed, n_vehicles, n_customers, M):
+def getT2(seed, n_vehicles, n_customers, n_extra_customers, M):
     random.seed(seed)
     
-    x = [math.floor(101*random.random()) for i in range(n_vehicles+2*n_customers+1)]
-    y = [math.floor(101*random.random()) for i in range(n_vehicles+2*n_customers+1)]
+    x = [math.floor(101*random.random()) for i in range(n_vehicles+2*n_customers+n_extra_customers+1)]
+    y = [math.floor(101*random.random()) for i in range(n_vehicles+2*n_customers+n_extra_customers+1)]
 
-    nodes = ['n%i' % (i+1) for i in range(n_vehicles+2*n_customers+1)]
-    s_nodes = [i for i in range(2*n_customers+n_vehicles)]
-    e_nodes = [i for i in range(2*n_customers)]
+    nodes = ['n%i' % (i+1) for i in range(n_vehicles+2*n_customers+n_extra_customers+1)]
+    s_nodes = [i for i in range(2*n_customers+n_vehicles+n_extra_customers)]
+    e_nodes = [i for i in range(2*n_customers)] + [i for i in range(2*n_customers+n_vehicles, 2*n_customers+n_vehicles+n_extra_customers)]
 
     t = {(node1, node2) : M for node1 in nodes for node2 in nodes}
     for i in s_nodes:

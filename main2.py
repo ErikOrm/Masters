@@ -10,18 +10,23 @@ from masterProblem import *
 from LPmasterProblem import *
 from DATread import *
 
-n_vehicles = 5
-n_customers = 10
-d_val = 200
-T = 200
+n_vehicles = 4
+n_customers = 6
+n_extra_customers = 3
+extra_dict = {i:[] for i in range(n_vehicles)}
+extra_dict[0] = [0,1]
+extra_dict[1] = [2]
+arr_times = {i:100 for i in range(n_vehicles)}
+d_val = 300
+T = 300
 Q_max = 4
 err_penalty = 3000
-seed = 155
-t = getT2(seed, n_vehicles, n_customers, T+1)
+seed = 195
+t = getT2(seed, n_vehicles, n_customers, n_extra_customers, T+1)
 n_iter = 500
 
 routes = ['r%i_1' % (i+1) for i in range(n_vehicles)]
-nodes = ['n%i' % (i+1) for i in range(2*n_customers + n_vehicles + 1)]
+nodes = ['n%i' % (i+1) for i in range(2*n_customers + n_vehicles + n_extra_customers + 1)]
 
 A = {(route, node): 0 for route in routes for node in nodes}
 
@@ -35,7 +40,7 @@ d = {}
 
 for i in range(n_vehicles):
     A[('r%i_1' % (i+1), 'n%i' % (2*n_customers+i+1))] = 1
-    A[('r%i_1' % (i+1), 'n%i' % (2*n_customers+n_vehicles+1))] = 1
+    A[('r%i_1' % (i+1), 'n%i' % (2*n_customers+n_vehicles+n_extra_customers+1))] = 1
     c['r%i_1' % (i+1)] = 0
 
 
@@ -44,7 +49,7 @@ for node in nodes:
 
 it = 0
 while red_cost <-1e-3 and it<n_iter:  
-    pi, gamma = dual_problem(n_vehicles,it+1,n_customers,A, c, d)
+    pi, gamma = dual_problem(n_vehicles, it+1, n_customers, n_extra_customers, A, c, d)
     print("pi: %s" % [pi["n%i" % (n_customers + i + 1)].value() for i in range(n_customers)])
     print("gamma: %s" % [gamma["c%i" % (i+1)].value() for i in range(n_vehicles)])
     
@@ -53,7 +58,7 @@ while red_cost <-1e-3 and it<n_iter:
     cost = {}
     for i in range(n_vehicles):
         print('ROUTE: r%i_%i' % (i+1, it+2))
-        path[(i+1)], r_cost[(i+1)], cost[(i+1)] = sub_problem2(n_customers, i, n_vehicles, pi, gamma, t, T, Q_max, err_penalty)
+        path[(i+1)], r_cost[(i+1)], cost[(i+1)] = sub_problem2(n_customers, i, n_vehicles, n_extra_customers, extra_dict[i], arr_times[i], pi, gamma, t, T, Q_max, err_penalty)
         print(path[(i+1)])
         print(r_cost[(i+1)])
         print(cost[(i+1)])
@@ -71,7 +76,7 @@ while red_cost <-1e-3 and it<n_iter:
     red_cost = min([r_cost[(i+1)] for i in range(n_vehicles)])
     red_costs.append(red_cost)
     print("redcost: %s" % red_cost)
-
-master_problem(n_vehicles, (it+1),n_customers, A, c, d_val)
-LPmaster_problem(n_vehicles, (it+1),n_customers, A, c, d_val)
-
+    
+    
+master_problem(n_vehicles, (it+1), n_customers, n_extra_customers, A, c, d_val)
+LPmaster_problem(n_vehicles, (it+1),n_customers, n_extra_customers, A, c, d_val)

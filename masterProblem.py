@@ -1,13 +1,13 @@
 import pulp
 
-def master_problem(m, n_r,n, A, cost1, d):
+def master_problem(m, n_r, n, l, A, cost1, d):
 #initialise the model
     master_problem = pulp.LpProblem('The master Problem', pulp.LpMinimize)
 
     
     # sets
     routes = ["r%i_%i" % (i+1, j+1) for i in range(m) for j in range(n_r)]
-    nodes = ["n%i" % (i+1) for i in range(n)]
+    nodes = ["n%i" % (i+1) for i in range(n,2*n)] + ["n%i" % (i+1) for i in range(2*n+m,2*n+m+l)]
     
     # create a dictionary of pulp variables with keys from ingredients
     ## the default lower bound is -inf
@@ -34,15 +34,16 @@ def master_problem(m, n_r,n, A, cost1, d):
     ##problem is then solved with the default solver
     master_problem.solve()
     
-    ##print the result
-    for route in routes:
-        print('route: %s is: %s'%(route, lam[route].value()))
-        for i in range(n):
-            print(A[route,'n%i'%(i+1)])
-    #
-    for node in nodes:
-        print('node: %s is: %s'%(node, y[node].value()))
+#    #print the result
+#    for route in routes:
+#        if lam[route].value() == 1:
+#            print('route: %s is: %s'%(route, lam[route].value()))
+#            for node in nodes:
+#                print(A[route,node])
+#    #
+#    for node in nodes:
+#        print('node: %s is: %s'%(node, y[node].value()))
     
     print(master_problem.objective.value())
     
-    
+    return lam
