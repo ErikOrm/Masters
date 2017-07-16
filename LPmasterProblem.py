@@ -35,3 +35,4 @@ def LPmaster_problem(m, n_r, n, l, A, cost1, d):
     master_problem.solve()
     print("LP")
     print(master_problem.objective.value())    
+#    print([x.value() for x in lam.values()])

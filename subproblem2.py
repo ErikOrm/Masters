@@ -202,6 +202,7 @@ def sub_problem2(n, car, m, l, passengers, arr_time, starting_times, pi, gamma, 
            
     c = 0
     time = arr_time
+    times = []
     for i in range(len(path)-1):
         if path[i+1] in o_nodes:
             time = max([starting_times[path[i+1]], time + t[(path[i],path[i+1])]])
@@ -211,7 +212,7 @@ def sub_problem2(n, car, m, l, passengers, arr_time, starting_times, pi, gamma, 
             c = c + time - starting_times[o_nodes[d_nodes.index(path[i+1])]]
         if path[i+1] in l_nodes:
             c = c + time
-#    print(time)
+        times.append(time)
+    times = path[:]
 
-            
-    return(path, cost-gamma['c%i' % (car+1)].value(), c)
+    return(path, cost-gamma['c%i' % (car+1)].value(), c, times)

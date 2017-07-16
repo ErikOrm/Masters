@@ -16,24 +16,7 @@ class graph:
         self.initialise_nodes()
         self.initialse_arcs()
         
-#
-#    def initialise_nodes(self):
-#        self.nodes = []
-#        for i in range(0,math.ceil(self.size_x/10)):
-#            for j in range(0,math.ceil(self.size_y/10)):
-#                if (i+j) % 2 == 0:
-#                    self.nodes.append(node(len(self.nodes)+1,i*10,j*10))
-#            
-#    def initialse_arcs(self):
-#        self.arcs = []
-#        for node_1 in self.nodes:
-#            for node_2 in self.nodes:
-#                if node_1 != node_2:
-#                    if math.sqrt(pow(node_1.x-node_2.x,2) + pow(node_1.y-node_2.y,2)) < 15:
-#                        self.arcs.append(arc(len(self.arcs)+1,node_1,node_2))
-#                        self.arcs.append(arc(len(self.arcs)+1,node_2,node_1))
-                        
-                        
+                       
     def initialise_nodes(self):
         self.nodes = []
         for i in range(30):
@@ -227,10 +210,17 @@ class model:
         for vehicle in self.vehicles:
             self.at_node[1].append(vehicle)
         
+        pickup_times = {v:[] for v in self.vehicles}
+        dropoff_times = {v:[] for v in self.vehicles}
+            
         for t in range(1,self.time):
                     
             # ADD USERS
             self.unserved_users.extend(time_user_dict[t])
+            
+            if t == 1:
+                print([x.start_time for x in self.unserved_users])
+            
 #            if mode == 'dynamic':
 #                dispatcher.on_added_users(self, t, time_user_dict[t])
           
@@ -258,6 +248,7 @@ class model:
 #                            print("dropoff: %s" % user)
 #                            print(user.start_node, user.end_node)
 #                            print(t)
+                            pickup_times[vehicle].append(t)
                             vehicle.dropoff(user)
                             dispatcher.on_dropoff(self, vehicle)
                             self.n_served = self.n_served + 1
@@ -284,6 +275,7 @@ class model:
 #                                self.waiting_times_dict[user] = t
                                 self.unserved_users.remove(user)
                                 dispatcher.on_pickup(self, vehicle)
+                                pickup_times[vehicle].append(t)
                                 cont = True
               
 
@@ -305,6 +297,9 @@ class model:
                 self.waiting_times_dict[user] = self.waiting_times_dict[user]-user.start_time
         
         print(time.time()-start_time)
+        
+        print(pickup_times)
+        print(dropoff_times)
               
 
         return [np.mean([x for x in self.waiting_times_dict.values() if x != np.inf]), self.n_served]
@@ -318,7 +313,7 @@ class final_dispatcher():
     def on_next_timestep(self, model, t, Q_max, mode):
         
         err_penalty = 2000
-        n_iter = 150
+        n_iter = 250
         freq = 50
         if mode == 'static':
             freq = 10000
@@ -399,11 +394,10 @@ class final_dispatcher():
             
             starting_times = {("n%i" % (i + 1)):(max(0,model.unserved_users[i].start_time-t)) for i in range(n)}
             
-            print([(x, x.start_node, x.end_node, x.start_time) for x in model.unserved_users])
-            ret_dict = opt(travel_times, m, n, l, passenger_dict, arrival_dict, starting_times, d_val, T, Q_max, err_penalty, n_iter)
-            #ret_dict = {1: ['n21', 'n8', 'n7', 'n18', 'n6', 'n17', 'n1', 'n16', 'n3', 'n13', 'n11', 'n23'], 2: ['n22', 'n9', 'n10', 'n20', 'n5', 'n15', 'n19', 'n4', 'n2', 'n14', 'n12', 'n23']}
-            print(ret_dict)
 
+            ret_dict = opt(travel_times, m, n, l, passenger_dict, arrival_dict, starting_times, d_val, T, Q_max, err_penalty, n_iter)
+            print(ret_dict)
+            
             duplicate_list = []
             for i in range(len(ret_dict)):
                 tmp_path = [int(x[1:])-1 for x in ret_dict[i+1]]
@@ -433,7 +427,6 @@ class final_dispatcher():
                         vehicle.path.append(next_node)
                     elif 2*n+m<=j<2*n+m+l:
                         vehicle.path.extend(dijkstra(vehicle.path[-1], keep_track_of_passengers_dict[(j-2*n-m)].end_node, model.graph.nodes, model.graph.arcs)[0])
-
 #                print(vehicle.path)
                         
     def on_pickup(self, model, vehicle):
@@ -461,20 +454,26 @@ n_final = 0
 times_final2 = 0
 n_final2 = 0
 
-r.seed(52363)
-mod = model(0,100,100,50,10,2,600)
+n = 20
+m = 3
+t = 200
+cap = 4
+r.seed(325362)
+
+
+mod = model(0,100,100,n,m,cap,t)
 d = final_dispatcher()
-tmp_list = mod.simulate(d, 'dynamic')
-times_final = times_final + tmp_list[0]
-n_final = n_final + tmp_list[1]
+#tmp_list = mod.simulate(d, 'dynamic')
+#times_final = times_final + tmp_list[0]
+#n_final = n_final + tmp_list[1]
 tmp_list = mod.simulate(d, 'static')
 times_final2 = times_final2 + tmp_list[0]
 n_final2 = n_final2 + tmp_list[1]
     
 print(times_final)
 print(n_final)
-print(times_final*n_final + (50-n_final)*400)
+print(times_final*n_final + (n-n_final)*t)
 print(times_final2)
 print(n_final2)
-print(times_final2*n_final2 + (50-n_final2)*400)
+print(times_final2*n_final2 + (n-n_final2)*t)
 

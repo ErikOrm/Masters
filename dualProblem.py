@@ -29,6 +29,5 @@ def dual_problem(n_c, n_r, n_n, n_ec, A, c, d):
                               
     ##problem is then solved with the default solver
     dual_problem.solve()
-
    
     return(pi, gamma)
