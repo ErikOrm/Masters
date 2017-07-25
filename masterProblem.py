@@ -34,7 +34,6 @@ def master_problem(m, n_r, n, l, A, cost1, d):
     ##problem is then solved with the default solver
     master_problem.solve()
     
-    #print the result
 #    for route in routes:
 #        if lam[route].value() == 1:
 #            print('route: %s is: %s'%(route, lam[route].value()))
@@ -43,7 +42,7 @@ def master_problem(m, n_r, n, l, A, cost1, d):
 #    #
 #    for node in nodes:
 #        print('node: %s is: %s'%(node, y[node].value()))
-#    
-    print(master_problem.objective.value())
+##    
+#    print(master_problem.objective.value())
     
-    return lam
+    return lam, master_problem.objective.value()

@@ -6,6 +6,7 @@ import numpy as np
 import time
 from optim import opt
 from scipy.spatial import Delaunay
+from insertion import *
 
 class graph:
     
@@ -19,9 +20,9 @@ class graph:
                        
     def initialise_nodes(self):
         self.nodes = []
-        for i in range(30):
-            x = 100*r.random()
-            y = 100*r.random()
+        for i in range(self.size):
+            x = self.size_x*r.random()
+            y = self.size_y*r.random()
             self.nodes.append(node(len(self.nodes)+1,x,y))
             
     def initialse_arcs(self):
@@ -77,16 +78,6 @@ class arc:
     def __repr__(self):
         return "(%i,%i,%i)" % (self.ID, self.start_node.ID, self.end_node.ID)      
         
-def intersect(A,B,C,D):
-    k1 = (B.y-A.y)/(B.x-A.x)
-    k2 = (D.y-C.y)/(D.x-C.x)
-    m1 = A.y-k1*A.x
-    m2 = C.y-k2*C.x
-    crossX = (m2-m1)/(k1-k2)
-    if min(A.x, B.x) < crossX < max(A.x, B.x) and min(C.x, D.x) < crossX < max(C.x, D.x):
-        return True
-    else:
-        return False
 
 class user:
     
@@ -106,9 +97,10 @@ class vehicle:
         self.node = start_node
         self.capacity = capacity
         self.path = []
+        self.short_path = []
         self.users = []
         self.target_users = []
-        self.target_node = []
+        self.arrival_time = 1
         
         
     def __repr__(self):
@@ -117,11 +109,10 @@ class vehicle:
     
     def pickup(self, user, time):
         if (not self.node == user.start_node) or len(self.users) == self.capacity:
-            pass# raise Exception("Disallowed pickup")
+            raise Exception("Disallowed pickup")
         elif time < user.start_time:
             return "wait"
         else:
-#            print("pickup")
             self.target_users.remove(user)
             self.users.append(user)
             return "pickup"
@@ -131,7 +122,6 @@ class vehicle:
         if (not self.node == user.end_node) or not user in self.users:
             raise Exception("Disallowed dropoff")
         else:
-#            print("dropoff")
             self.users.remove(user)
             
     def assign(self, user):
@@ -200,7 +190,7 @@ class model:
         self.vehicles = self.read_vehicle_template()
         self.waiting_times_dict = {user:np.inf for user in self.users}
         time_user_dict = {t:[] for t in range(1,self.time+1)}
-        if mode == 'dynamic':
+        if mode in ['dynamic', 'dynamic_insert']:
             for user in self.users:
                 time_user_dict[user.start_time].append(user)
         elif mode == 'static':
@@ -208,47 +198,36 @@ class model:
                 time_user_dict[1].append(user)
         self.at_node = {t:[] for t in range(1,self.time+1)}
         for vehicle in self.vehicles:
-            self.at_node[1].append(vehicle)
+            self.at_node[vehicle.arrival_time].append(vehicle)
         
         pickup_times = {v:[] for v in self.vehicles}
-        dropoff_times = {v:[] for v in self.vehicles}
-            
+
         for t in range(1,self.time):
+            
                     
             # ADD USERS
             self.unserved_users.extend(time_user_dict[t])
-            
-            if t == 1:
-                print([x.start_time for x in self.unserved_users])
-            
-#            if mode == 'dynamic':
-#                dispatcher.on_added_users(self, t, time_user_dict[t])
-          
-            # VEHICLE ARRIVALS, PICKUPS and DROPOFFS
+
+            # VEHICLE ARRIVALS
             for vehicle in self.at_node[t]:
                 if vehicle.path:
                     vehicle.node = vehicle.path[0]
                     vehicle.path = vehicle.path[1:]
-#                    print("Reaches node %s at time %i" % (vehicle.node, t))
   
             # onNextTimestep
-            dispatcher.on_next_timestep(self, t, self.vehicle_cap, mode)
+            dispatcher.on_next_timestep(self, t, self.vehicle_cap, mode, time_user_dict[t])
 
-                  
             for vehicle in self.at_node[t]:
-#                print(vehicle)
-#                print("-----")
-                
+
                 cont = True
                 while cont:
                     cont = False
                     for user in vehicle.users:
-                        if user.end_node == vehicle.node:
-#                            print(vehicle)
-#                            print("dropoff: %s" % user)
-#                            print(user.start_node, user.end_node)
-#                            print(t)
+                        if user.end_node == vehicle.node == vehicle.short_path[0][0]:
+                            assert vehicle.node == vehicle.short_path[0][0], "%s : %s : %s : %s" % (vehicle, user, vehicle.node, vehicle.short_path[0])
+                            vehicle.short_path = vehicle.short_path[1:]
                             pickup_times[vehicle].append(t)
+#                            print("%s dropoff %s at %i" % (vehicle, user, t))
                             vehicle.dropoff(user)
                             dispatcher.on_dropoff(self, vehicle)
                             self.n_served = self.n_served + 1
@@ -262,17 +241,16 @@ class model:
                     cont = False
                     if vehicle.target_users:
                         user = vehicle.target_users[0]
-                        if user.start_node == vehicle.node:
-#                            print(vehicle)
-#                            print("pickup %s" % user)
-#                            print(user.start_node, user.end_node)
-#                            print(t)
+                        if user.start_node == vehicle.node == vehicle.short_path[0][0]:
                             res = vehicle.pickup(user, t)
                             if res == "wait":
                                 vehicle.path = [vehicle.node] + vehicle.path
                                 wait = True
                             elif  res == "pickup":
-#                                self.waiting_times_dict[user] = t
+#                                print("%s pickup %s at %i" % (vehicle, user, t))
+#                                print(vehicle.node, user.start_node)
+                                assert vehicle.node == vehicle.short_path[0][0], "%s : %s : %s : %s" % (vehicle, user, vehicle.node, vehicle.short_path[0])
+                                vehicle.short_path = vehicle.short_path[1:]
                                 self.unserved_users.remove(user)
                                 dispatcher.on_pickup(self, vehicle)
                                 pickup_times[vehicle].append(t)
@@ -280,13 +258,27 @@ class model:
               
 
 
-                if not wait and vehicle.path and math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])]) > 0:
-                    try:
-                        self.at_node[t+math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])])].append(vehicle)
-                    except:
-                        self.at_node[t+1].append(vehicle)
+                if not wait and vehicle.path:
+                    if math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])]) > 0:
+                        if t+math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])]) <= self.time:
+                            self.at_node[t+math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])])].append(vehicle)
+                            vehicle.arrival_time = t+math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])])
+                        else:
+                            pass
+                    else:
+                        assert vehicle.node == vehicle.path[0]
+                        vehicle.node = vehicle.path[0]
+                        vehicle.path = vehicle.path[1:]
+                        if vehicle.path:
+                            assert math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])]) > 0
+                            self.at_node[t+math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])])].append(vehicle)
+                            vehicle.arrival_time = t+math.ceil(self.dist_dict[(vehicle.node, vehicle.path[0])])
+                        else:
+                            self.at_node[t+1].append(vehicle)
+                            vehicle.arrival_time = t+1
                 else:
                     self.at_node[t+1].append(vehicle)
+                    vehicle.arrival_time = t+1
             
 
             self.at_node[t] = []
@@ -297,10 +289,7 @@ class model:
                 self.waiting_times_dict[user] = self.waiting_times_dict[user]-user.start_time
         
         print(time.time()-start_time)
-        
-        print(pickup_times)
-        print(dropoff_times)
-              
+             
 
         return [np.mean([x for x in self.waiting_times_dict.values() if x != np.inf]), self.n_served]
             
@@ -310,29 +299,28 @@ class final_dispatcher():
     def __init__(self):
         self.to_update = []
 
-    def on_next_timestep(self, model, t, Q_max, mode):
-        
+    def on_next_timestep(self, model, t, Q_max, mode, new_users):
         err_penalty = 2000
         n_iter = 250
         freq = 50
+        reopt = 300
         if mode == 'static':
             freq = 10000
             T = model.time
             d_val = model.time
-        elif mode == 'dynamic':
-            T = min(model.time-t, 200)
+        elif mode in ['dynamic', 'dynamic_insert']:
+            T = min(model.time-t, reopt)
             d_val = T
 
         if t % freq == 1:
             
             print("t: %i" % t)
             
-            passenger_dict = {}
+            passenger_dict = {}  # vehicle index : passenger index
             passengers = []
-            l = 0
             arrival_dict = {c:0 for c in range(len(model.vehicles))}
             tmp_passenger_no = 0
-            keep_track_of_passengers_dict = {}
+            keep_track_of_passengers_dict = {} # passenger index : user
             for vehicle in model.vehicles:
                 vehicle.target_users = []
                 passenger_dict[model.vehicles.index(vehicle)] = []
@@ -341,7 +329,7 @@ class final_dispatcher():
                     keep_track_of_passengers_dict[tmp_passenger_no] = user
                     tmp_passenger_no = tmp_passenger_no + 1
                 passengers.extend(vehicle.users)
-                l += len(vehicle.users)
+            l = len(passengers)
             n = len(model.unserved_users)
             m = len(model.vehicles)
             
@@ -388,18 +376,58 @@ class final_dispatcher():
                     
                 travel_times[("n%i" % (2*n + model.vehicles.index(vehicle) + 1), "n%i" % (2*n+m+l+1))] = 0
                 
-            for tt in range(t, min(model.time, t+T)):
+                             
+            for tt in range(t, min(model.time, t+T+1)):
                 for vehicle in model.at_node[tt]:
                     arrival_dict[model.vehicles.index(vehicle)] = tt-t
             
             starting_times = {("n%i" % (i + 1)):(max(0,model.unserved_users[i].start_time-t)) for i in range(n)}
             
+                              
+            hot_start_paths = {}
+            hot_start_costs = {}
+            for vehicle in model.vehicles:
+                hs_cost = 0
+                if vehicle in model.at_node[t]:
+                    last_node = vehicle.node
+                else:
+                    last_node = vehicle.path[0] 
+                load = len(vehicle.users)
+                time = arrival_dict[model.vehicles.index(vehicle)]
+                                    
+                hs_path = ["n%i" % (2*n + model.vehicles.index(vehicle) + 1)]
+                p_users = []
+                for node in vehicle.short_path:
+                    node = node[0]
+                    time = time + model.dist_dict[(last_node, node)]
+                    last_node = node
+                    for user in vehicle.users:
+                        if node == user.end_node:
+                            hs_path.append("n%i" % (2*n + m + passengers.index(user) + 1))
+                            hs_cost = hs_cost + time
+                        load = load - 1
+                    for user in vehicle.target_users:
+                        if node == user.start_node:
+                            hs_path.append("n%i" % (model.unserved_users.index(user) + 1))
+                            if time < starting_times["n%i" % (model.unserved_users.index(user) + 1)]:
+                                time = starting_times["n%i" % (model.unserved_users.index(user) + 1)]
+                            p_users.append(user)
+                            load = load + 1
+                        if node == user.end_node:
+                            hs_path.append("n%i" % (model.unserved_users.index(user) + n + 1))
+                            hs_cost = hs_cost + time - starting_times["n%i" % (model.unserved_users.index(user) + 1)]
+                            assert user in p_users
+                            load = load - 1
+                    assert load <= model.vehicle_cap
+                hot_start_paths[model.vehicles.index(vehicle)] = hs_path + ["n%i" % (2*n+m+l+1)]
+                hot_start_costs[model.vehicles.index(vehicle)] = hs_cost
+            
 
-            ret_dict = opt(travel_times, m, n, l, passenger_dict, arrival_dict, starting_times, d_val, T, Q_max, err_penalty, n_iter)
-            print(ret_dict)
+            ret_dict = opt(travel_times, m, n, l, passenger_dict, arrival_dict, starting_times, hot_start_paths, hot_start_costs, d_val, T, Q_max, err_penalty, n_iter, 'label')
             
             duplicate_list = []
             for i in range(len(ret_dict)):
+                assert ret_dict[i+1][0] == "n%i" % (2*n + i + 1)
                 tmp_path = [int(x[1:])-1 for x in ret_dict[i+1]]
                 remove_indices = []
                 for j in range(len(tmp_path)):
@@ -417,63 +445,73 @@ class final_dispatcher():
                 else: 
                     next_node = vehicle.path[0] 
                 vehicle.path = []
+                vehicle.short_path = []
+
                 for j in tmp_path:
                     if j<n:
                         vehicle.target_users.append(model.unserved_users[j])
-                        vehicle.path.extend(dijkstra(vehicle.path[-1], model.unserved_users[j].start_node, model.graph.nodes, model.graph.arcs)[0])
+                        vehicle.path.extend(model.path_dict[(vehicle.path[-1], model.unserved_users[j].start_node)])
+                        vehicle.short_path.append((model.unserved_users[j].start_node, 's'))
                     elif n<=j<2*n:
-                        vehicle.path.extend(dijkstra(vehicle.path[-1], model.unserved_users[j-n].end_node, model.graph.nodes, model.graph.arcs)[0])
+                        vehicle.path.extend(model.path_dict[(vehicle.path[-1], model.unserved_users[j-n].end_node)])
+                        vehicle.short_path.append((model.unserved_users[j-n].end_node, 'e'))
                     elif 2*n<=j<2*n+m:
+                        assert vehicle.path == []
                         vehicle.path.append(next_node)
                     elif 2*n+m<=j<2*n+m+l:
-                        vehicle.path.extend(dijkstra(vehicle.path[-1], keep_track_of_passengers_dict[(j-2*n-m)].end_node, model.graph.nodes, model.graph.arcs)[0])
-#                print(vehicle.path)
+                        vehicle.path.extend(model.path_dict[(vehicle.path[-1], keep_track_of_passengers_dict[(j-2*n-m)].end_node)])
+                        vehicle.short_path.append((keep_track_of_passengers_dict[(j-2*n-m)].end_node, 'e'))
+                        
+        elif mode == 'dynamic_insert':
+            for user in new_users:
+                insert(user, model, t)
+                
+                        
                         
     def on_pickup(self, model, vehicle):
         pass
     
     def on_dropoff(self, model, vehicle):
         pass
-  
-#    def on_added_users(self, model, t, users):
-#        
-#        for user in users:
-#            insert(user, model.vehicles)
-#        
-        
-        
-        
-        
-        
-        
         
         
     
-times_final = 0
-n_final = 0
+times_final1 = 0
+n_final1 = 0
 times_final2 = 0
 n_final2 = 0
+#times_final3 = 0
+#n_final3 = 0
 
 n = 20
 m = 3
-t = 200
+t = 800
 cap = 4
-r.seed(325362)
+seeds = [234,235,1261,6436,425]
+niter = 5
 
-
-mod = model(0,100,100,n,m,cap,t)
-d = final_dispatcher()
-#tmp_list = mod.simulate(d, 'dynamic')
-#times_final = times_final + tmp_list[0]
-#n_final = n_final + tmp_list[1]
-tmp_list = mod.simulate(d, 'static')
-times_final2 = times_final2 + tmp_list[0]
-n_final2 = n_final2 + tmp_list[1]
+for i in range(niter):
+    r.seed(seeds[i])
+    mod = model(30,100,100,n,m,cap,t)
+    d = final_dispatcher()
+    tmp_list = mod.simulate(d, 'dynamic')
+    times_final1 = times_final1 + tmp_list[0]
+    n_final1 = n_final1 + tmp_list[1]
+#    tmp_list = mod.simulate(d, 'dynamic_insert')
+#    times_final2 = times_final2 + tmp_list[0]
+#    n_final2 = n_final2 + tmp_list[1]
+#    tmp_list = mod.simulate(d, 'static')
+#    times_final3 = times_final3 + tmp_list[0]
+#    n_final3 = n_final3 + tmp_list[1]
     
-print(times_final)
-print(n_final)
-print(times_final*n_final + (n-n_final)*t)
-print(times_final2)
-print(n_final2)
-print(times_final2*n_final2 + (n-n_final2)*t)
 
+mod.graph.plot()
+print(times_final1/niter)
+print(n_final1/niter)
+print((times_final1*n_final1/(niter*niter) + (n-n_final1/niter)*t))
+print(times_final2/niter)
+print(n_final2/niter)
+print((times_final2*n_final2/(niter*niter) + (n-n_final2/niter)*t))
+#print(times_final3/5)
+#print(n_final3/5)
+#print((times_final3*n_final3/25 + (n-n_final3/5)*t))
