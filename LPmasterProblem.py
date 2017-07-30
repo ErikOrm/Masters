@@ -33,7 +33,7 @@ def LPmaster_problem(m, n_r, n, l, A, cost1, d):
         
     ##problem is then solved with the default solver
     master_problem.solve()
-    print("LP")
-    print(master_problem.objective.value())    
+#    print("LP")
+#    print(master_problem.objective.value())    
 #    print([x.value() for x in lam.values()])
     return master_problem.objective.value()

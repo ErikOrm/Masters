@@ -117,22 +117,12 @@ def sub_problem_label(n, k, m, l, passengers, arr_time, starting_times, pi, gamm
     path = [best_lab.node]
     labels = [best_lab]
     while best_lab.parent:
-        if n<=best_lab.node<2*n or 2*n+m<=best_lab.node<2*n+m+l:
+        if n<=best_lab.node<2*n:
+            cost = cost + best_lab.time - starting_times["n%i" % (best_lab.node+1-n)]
+        elif 2*n+m<=best_lab.node<2*n+m+l:
             cost = cost + best_lab.time
         best_lab = best_lab.parent
         path.append(best_lab.node)
         labels.append(best_lab)
     
     return ["n%i" % (i+1) for i in path[::-1]], reduced_cost, cost
-    
-#m = 2
-#n = 3
-#pi = {"n%i" % (i+1):200 for i in range(3,6)}
-#gamma = {"c%i" % (i+1):0 for i in range(2)}
-#T = 200
-#seed = 34
-#t = getT2(seed, m, n, T+1)
-#Qmax = 2
-#path, red_cost, cost, labels = sub_problem_label(n, 0, m, pi, gamma, t, T, Qmax, 2)
-#
-

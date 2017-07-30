@@ -45,6 +45,7 @@ class graph:
                                 
         
     def plot(self):
+        plt.figure(num=None, figsize=(10, 10), dpi=120, facecolor='w', edgecolor='w')
         plt.plot([node.x for node in self.nodes], [node.y for node in self.nodes],'ro')
         for arc in self.arcs:
             plt.plot([arc.start_node.x, arc.end_node.x], [arc.start_node.y, arc.end_node.y])
@@ -136,13 +137,15 @@ class vehicle:
         
 class model:
     
-    def __init__(self, size, size_x, size_y, n_users, n_vehicles, vehicle_cap, time):
+    def __init__(self, size, size_x, size_y, n_users, n_vehicles, vehicle_cap, time, reopt, horizon):
         
         self.graph = graph(size, size_x, size_y)
         self.create_user_template(n_users, time)
         self.create_vehicle_template(n_vehicles, vehicle_cap)
         self.time = time
         self.vehicle_cap = vehicle_cap
+        self.reopt = reopt
+        self.horizon = horizon
         self.dist_dict = {}
         self.path_dict = {}
         for node1 in self.graph.nodes:
@@ -190,10 +193,10 @@ class model:
         self.vehicles = self.read_vehicle_template()
         self.waiting_times_dict = {user:np.inf for user in self.users}
         time_user_dict = {t:[] for t in range(1,self.time+1)}
-        if mode in ['dynamic', 'dynamic_insert']:
+        if mode[0] in ['dynamic', 'dynamic_insert']:
             for user in self.users:
                 time_user_dict[user.start_time].append(user)
-        elif mode == 'static':
+        elif mode[0] == 'static':
             for user in self.users:
                 time_user_dict[1].append(user)
         self.at_node = {t:[] for t in range(1,self.time+1)}
@@ -282,16 +285,20 @@ class model:
             
 
             self.at_node[t] = []
-            
+            if time.time()-start_time >300:
+                return [-1,-1]
             
         for t in range(1,self.time):
             for user in time_user_dict[t]:
-                self.waiting_times_dict[user] = self.waiting_times_dict[user]-user.start_time
+                if self.waiting_times_dict[user] == np.inf:
+                    self.waiting_times_dict[user] = self.time-user.start_time
+                else:
+                    self.waiting_times_dict[user] = self.waiting_times_dict[user]-user.start_time
         
         print(time.time()-start_time)
              
 
-        return [np.mean([x for x in self.waiting_times_dict.values() if x != np.inf]), self.n_served]
+        return [sum([x for x in self.waiting_times_dict.values()]), time.time()-start_time]
             
           
 class final_dispatcher():
@@ -302,14 +309,13 @@ class final_dispatcher():
     def on_next_timestep(self, model, t, Q_max, mode, new_users):
         err_penalty = 2000
         n_iter = 250
-        freq = 50
-        reopt = 300
-        if mode == 'static':
+        if mode[0] == 'static':
             freq = 10000
             T = model.time
             d_val = model.time
-        elif mode in ['dynamic', 'dynamic_insert']:
-            T = min(model.time-t, reopt)
+        elif mode[0] in ['dynamic', 'dynamic_insert']:
+            freq = model.reopt
+            T = min(model.time-t, model.horizon)
             d_val = T
 
         if t % freq == 1:
@@ -376,6 +382,9 @@ class final_dispatcher():
                     
                 travel_times[("n%i" % (2*n + model.vehicles.index(vehicle) + 1), "n%i" % (2*n+m+l+1))] = 0
                 
+            for node in range(n_nodes):
+                travel_times[("n%i" % (node+1), "n%i" % (node+1))] = 1000
+                             
                              
             for tt in range(t, min(model.time, t+T+1)):
                 for vehicle in model.at_node[tt]:
@@ -423,7 +432,7 @@ class final_dispatcher():
                 hot_start_costs[model.vehicles.index(vehicle)] = hs_cost
             
 
-            ret_dict = opt(travel_times, m, n, l, passenger_dict, arrival_dict, starting_times, hot_start_paths, hot_start_costs, d_val, T, Q_max, err_penalty, n_iter, 'label')
+            ret_dict, MP, LP = opt(travel_times, m, n, l, passenger_dict, arrival_dict, starting_times, hot_start_paths, hot_start_costs, d_val, T, Q_max, err_penalty, n_iter, mode[1])
             
             duplicate_list = []
             for i in range(len(ret_dict)):
@@ -462,7 +471,7 @@ class final_dispatcher():
                         vehicle.path.extend(model.path_dict[(vehicle.path[-1], keep_track_of_passengers_dict[(j-2*n-m)].end_node)])
                         vehicle.short_path.append((keep_track_of_passengers_dict[(j-2*n-m)].end_node, 'e'))
                         
-        elif mode == 'dynamic_insert':
+        elif mode[0] == 'dynamic_insert':
             for user in new_users:
                 insert(user, model, t)
                 
@@ -474,44 +483,40 @@ class final_dispatcher():
     def on_dropoff(self, model, vehicle):
         pass
         
-        
-    
-times_final1 = 0
-n_final1 = 0
-times_final2 = 0
-n_final2 = 0
-#times_final3 = 0
-#n_final3 = 0
 
-n = 20
-m = 3
-t = 800
-cap = 4
-seeds = [234,235,1261,6436,425]
+D = 5
+n =       [60]*D  + [60]*D   + [80]*D   + [40]*D   + [80]*D
+m =       [5]*D  + [5]*D    + [10]*D   + [5]*D    + [10]*D
+t =       [800]*D + [1000]*D + [800]*D  + [600]*D  + [800]*D
+cap =     [2]*D   + [2]*D    + [2]*D    + [2]*D    + [2]*D
+p =       [30]*D  + [30]*D   + [30]*D   + [30]*D   + [30]*D
+reopt =   [50]*D  + [50]*D   + [50]*D   + [50]*D   + [30]*D
+horizon = [200]*D + [200]*D  + [300]*D  + [200]*D  + [200]*D
+seeds = [i+j for i in [12314,34634,214,3245,1516] for j in [124,435,3,2357,137,1,2345,5754,7,12346,45673,1345,2135752,2342,5834,863,242342,23525,26264567,1324325,124235,1452362,15346,2347,564,124234,23214,4363456,1234,124]]*5
 niter = 5
 
-for i in range(niter):
+F = open('gen6.txt','w') 
+time1 = []
+time2 = []
+val1 = []
+val2 = []
+for i in range(len(n)):
+    print(i)
     r.seed(seeds[i])
-    mod = model(30,100,100,n,m,cap,t)
+    mod = model(p[i],100,100,n[i],m[i],cap[i],t[i], reopt[i], horizon[i])
     d = final_dispatcher()
-    tmp_list = mod.simulate(d, 'dynamic')
-    times_final1 = times_final1 + tmp_list[0]
-    n_final1 = n_final1 + tmp_list[1]
-#    tmp_list = mod.simulate(d, 'dynamic_insert')
-#    times_final2 = times_final2 + tmp_list[0]
-#    n_final2 = n_final2 + tmp_list[1]
-#    tmp_list = mod.simulate(d, 'static')
-#    times_final3 = times_final3 + tmp_list[0]
-#    n_final3 = n_final3 + tmp_list[1]
-    
-
-mod.graph.plot()
-print(times_final1/niter)
-print(n_final1/niter)
-print((times_final1*n_final1/(niter*niter) + (n-n_final1/niter)*t))
-print(times_final2/niter)
-print(n_final2/niter)
-print((times_final2*n_final2/(niter*niter) + (n-n_final2/niter)*t))
-#print(times_final3/5)
-#print(n_final3/5)
-#print((times_final3*n_final3/25 + (n-n_final3/5)*t))
+    dyn = mod.simulate(d, ('dynamic_insert','label'))
+    dyni = mod.simulate(d, ('dynamic_insert','reinsert'))
+    both = mod.simulate(d, ('dynamic_insert', 'both'))
+    F.write("&%.1f & %.1f && %.1f & %.1f && %.1f & %.1f\n" % (dyn[0], dyn[1],dyni[0], dyni[1], both[0], both[1]))
+    val1.append(dyn[0])
+    val2.append(dyni[0])
+    time1.append(dyn[1])
+    time2.append(dyni[1])
+F.close()
+#
+#vall1 = [sum(val1[:D])/D, sum(val1[150:300])/150, sum(val1[300:450])/150, sum(val1[450:600])/150, sum(val1[600:750])/150]
+#vall2 = [sum(val2[:D])/D, sum(val2[150:300])/150, sum(val2[300:450])/150, sum(val2[450:600])/150, sum(val2[600:750])/150]
+#timee1 = [sum(time1[:D])/D, sum(time1[150:300])/150, sum(time1[300:450])/150, sum(time1[450:600])/150, sum(time1[600:750])/150]
+#timee2 = [sum(time2[:D])/D, sum(time2[150:300])/150, sum(time2[300:450])/150, sum(time2[450:600])/150, sum(time2[600:750])/150]
+# &2119.0 & 1.2 & 2135.0 & 0.9 & 1487.0 & 3.7 

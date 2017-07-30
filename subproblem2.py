@@ -2,7 +2,7 @@ import pulp
 import math
 
 
-def sub_problem2(n, car, m, l, passengers, arr_time, starting_times, pi, gamma, t, T, Qmax, err_penalty):
+def sub_problem2(n, car, m, l, passengers, arr_time, starting_times, pi, gamma, t, T, Qmax, err_penalty, mode):
     
     
     #initialise the model
@@ -118,19 +118,58 @@ def sub_problem2(n, car, m, l, passengers, arr_time, starting_times, pi, gamma, 
                 free_extra_nodes.remove(-best_index-1)
             added = True
             
-            
-    inc_nodes = [node for node in path if node in o_nodes]
-    for node1 in inc_nodes:
-        path_copy = path.copy()
-        node2 = d_nodes[o_nodes.index(node1)]
-        path_copy.remove(node1)
-        path_copy.remove(node2)
-        best_cost = 0
-        best_path = path_copy
-        for j in range(1,len(path_copy)):
-            for k in range(j,len(path_copy)):
+    if mode == 'reinsert':
+        inc_nodes = [node for node in path if node in o_nodes]
+        for node1 in inc_nodes:
+            path_copy = path.copy()
+            node2 = d_nodes[o_nodes.index(node1)]
+            path_copy.remove(node1)
+            path_copy.remove(node2)
+            best_cost = 0
+            best_path = path_copy
+            for j in range(1,len(path_copy)):
+                for k in range(j,len(path_copy)):
+                    tmp_cost = 0
+                    tmp_path = path_copy[:j] + [node1] + path_copy[j:k] + [node2] + path_copy[k:]
+                    tmp_Q = len(passengers)
+                    fail = 0
+                    time = arr_time
+                    for node in tmp_path:
+                        tmp_Q = tmp_Q + q[node]
+                        if tmp_Q > Qmax:
+                            fail = 1
+                    if fail:
+                        tmp_cost = err_penalty
+                    else:
+                        for ll in range(len(tmp_path)-1):
+                            time = time + t[(tmp_path[ll],tmp_path[ll+1])]
+                            if tmp_path[ll+1] in o_nodes and time < starting_times[tmp_path[ll+1]]:
+                                time = starting_times[tmp_path[ll+1]]
+                            if tmp_path[ll+1] in d_nodes:
+                                tmp_cost = tmp_cost + time - starting_times[o_nodes[d_nodes.index(tmp_path[ll+1])]] - pi[tmp_path[ll+1]].value()
+                            if tmp_path[ll+1] in l_nodes:
+                                tmp_cost = tmp_cost + time - pi[tmp_path[ll+1]].value()
+                        if time > T:
+                            tmp_cost = err_penalty
+    
+                    if tmp_cost < best_cost:
+                        best_cost = tmp_cost
+                        best_path = tmp_path
+            if best_cost < cost:
+                path = best_path
+                cost = best_cost
+        
+        ###
+        
+        inc_extra_nodes = [node for node in path if node in l_nodes]
+        for node in inc_extra_nodes:
+            path_copy = path.copy()
+            path_copy.remove(node)
+            best_cost = 0
+            best_path = path_copy
+            for j in range(1,len(path_copy)):
                 tmp_cost = 0
-                tmp_path = path_copy[:j] + [node1] + path_copy[j:k] + [node2] + path_copy[k:]
+                tmp_path = path_copy[:j] + [node] + path_copy[j:]
                 tmp_Q = len(passengers)
                 fail = 0
                 time = arr_time
@@ -146,57 +185,18 @@ def sub_problem2(n, car, m, l, passengers, arr_time, starting_times, pi, gamma, 
                         if tmp_path[ll+1] in o_nodes and time < starting_times[tmp_path[ll+1]]:
                             time = starting_times[tmp_path[ll+1]]
                         if tmp_path[ll+1] in d_nodes:
-                            tmp_cost = tmp_cost + time - starting_times[o_nodes[d_nodes.index(tmp_path[ll+1])]] - pi[tmp_path[ll+1]].value()
+                            tmp_cost = tmp_cost + time - starting_times[o_nodes[d_nodes.index(tmp_path[ll+1])]]- pi[tmp_path[ll+1]].value()
                         if tmp_path[ll+1] in l_nodes:
                             tmp_cost = tmp_cost + time - pi[tmp_path[ll+1]].value()
                     if time > T:
                         tmp_cost = err_penalty
-
                 if tmp_cost < best_cost:
                     best_cost = tmp_cost
                     best_path = tmp_path
-        if best_cost < cost:
-            path = best_path
-            cost = best_cost
-    
-    ###
-    
-    inc_extra_nodes = [node for node in path if node in l_nodes]
-    for node in inc_extra_nodes:
-        path_copy = path.copy()
-        path_copy.remove(node)
-        best_cost = 0
-        best_path = path_copy
-        for j in range(1,len(path_copy)):
-            tmp_cost = 0
-            tmp_path = path_copy[:j] + [node] + path_copy[j:]
-            tmp_Q = len(passengers)
-            fail = 0
-            time = arr_time
-            for node in tmp_path:
-                tmp_Q = tmp_Q + q[node]
-                if tmp_Q > Qmax:
-                    fail = 1
-            if fail:
-                tmp_cost = err_penalty
-            else:
-                for ll in range(len(tmp_path)-1):
-                    time = time + t[(tmp_path[ll],tmp_path[ll+1])]
-                    if tmp_path[ll+1] in o_nodes and time < starting_times[tmp_path[ll+1]]:
-                        time = starting_times[tmp_path[ll+1]]
-                    if tmp_path[ll+1] in d_nodes:
-                        tmp_cost = tmp_cost + time - starting_times[o_nodes[d_nodes.index(tmp_path[ll+1])]]- pi[tmp_path[ll+1]].value()
-                    if tmp_path[ll+1] in l_nodes:
-                        tmp_cost = tmp_cost + time - pi[tmp_path[ll+1]].value()
-                if time > T:
-                    tmp_cost = err_penalty
-            if tmp_cost < best_cost:
-                best_cost = tmp_cost
-                best_path = tmp_path
-        if best_cost < cost:
-            path = best_path
-            cost = best_cost
-        
+            if best_cost < cost:
+                path = best_path
+                cost = best_cost
+            
     ###    
            
     c = 0
