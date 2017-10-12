@@ -26,3 +26,6 @@ dyn = mod.simulate(d, ('dynamic_insert','label'))
 
 ['dynamic', 'static', 'dynamic_insert'], ['label', 'reinsert', 'both']
 
+
+Required packages:
+numpy, random, math, matplotlib, time, scipy, pulp, itertools
