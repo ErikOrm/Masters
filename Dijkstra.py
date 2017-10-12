@@ -56,12 +56,4 @@ def floydwarshall(inp_graph):
                     pred[u][v] = pred[t][v] # route new path through t
  
     return dist, pred
- 
- 
- 
-graph = {0 : {1:6},
-         1 : {0:6, 2:8},
-         2 : {1:8,3:1},
-         3 : {2:1}}
- 
-dist, pred = floydwarshall(graph)
+
