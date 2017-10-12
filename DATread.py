@@ -8,7 +8,7 @@ import numpy as np
 import random
 import math
 
-
+# getT is to import data files for the map and create a distance matrix. If you want to create random maps, use getT2. 
 def getT():
     f = open(r'D:\MasterThesis\DATA\1P2.DAT','r')
     
