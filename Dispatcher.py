@@ -484,36 +484,36 @@ class final_dispatcher():
         pass
         
 
-D = 5
-n =       [60]*D  + [60]*D   + [80]*D   + [40]*D   + [80]*D
-m =       [5]*D  + [5]*D    + [10]*D   + [5]*D    + [10]*D
-t =       [800]*D + [1000]*D + [800]*D  + [600]*D  + [800]*D
-cap =     [2]*D   + [2]*D    + [2]*D    + [2]*D    + [2]*D
-p =       [30]*D  + [30]*D   + [30]*D   + [30]*D   + [30]*D
-reopt =   [50]*D  + [50]*D   + [50]*D   + [50]*D   + [30]*D
-horizon = [200]*D + [200]*D  + [300]*D  + [200]*D  + [200]*D
-seeds = [i+j for i in [12314,34634,214,3245,1516] for j in [124,435,3,2357,137,1,2345,5754,7,12346,45673,1345,2135752,2342,5834,863,242342,23525,26264567,1324325,124235,1452362,15346,2347,564,124234,23214,4363456,1234,124]]*5
-niter = 5
+#D = 5
+#n =       [60]*D  + [60]*D   + [80]*D   + [40]*D   + [80]*D
+#m =       [5]*D  + [5]*D    + [10]*D   + [5]*D    + [10]*D
+#t =       [800]*D + [1000]*D + [800]*D  + [600]*D  + [800]*D
+#cap =     [2]*D   + [2]*D    + [2]*D    + [2]*D    + [2]*D
+#p =       [30]*D  + [30]*D   + [30]*D   + [30]*D   + [30]*D
+#reopt =   [50]*D  + [50]*D   + [50]*D   + [50]*D   + [30]*D
+#horizon = [200]*D + [200]*D  + [300]*D  + [200]*D  + [200]*D
+#seeds = [i+j for i in [12314,34634,214,3245,1516] for j in [124,435,3,2357,137,1,2345,5754,7,12346,45673,1345,2135752,2342,5834,863,242342,23525,26264567,1324325,124235,1452362,15346,2347,564,124234,23214,4363456,1234,124]]*5
+#niter = 5
 
-F = open('gen6.txt','w') 
-time1 = []
-time2 = []
-val1 = []
-val2 = []
-for i in range(len(n)):
-    print(i)
-    r.seed(seeds[i])
-    mod = model(p[i],100,100,n[i],m[i],cap[i],t[i], reopt[i], horizon[i])
-    d = final_dispatcher()
-    dyn = mod.simulate(d, ('dynamic_insert','label'))
-    dyni = mod.simulate(d, ('dynamic_insert','reinsert'))
-    both = mod.simulate(d, ('dynamic_insert', 'both'))
-    F.write("&%.1f & %.1f && %.1f & %.1f && %.1f & %.1f\n" % (dyn[0], dyn[1],dyni[0], dyni[1], both[0], both[1]))
-    val1.append(dyn[0])
-    val2.append(dyni[0])
-    time1.append(dyn[1])
-    time2.append(dyni[1])
-F.close()
+#F = open('gen6.txt','w') 
+#time1 = []
+#time2 = []
+#val1 = []
+#val2 = []
+#for i in range(len(n)):
+#    print(i)
+#    r.seed(seeds[i])
+#    mod = model(p[i],100,100,n[i],m[i],cap[i],t[i], reopt[i], horizon[i])
+#    d = final_dispatcher()
+#    dyn = mod.simulate(d, ('dynamic_insert','label'))
+#    dyni = mod.simulate(d, ('dynamic_insert','reinsert'))
+#    both = mod.simulate(d, ('dynamic_insert', 'both'))
+#    F.write("&%.1f & %.1f && %.1f & %.1f && %.1f & %.1f\n" % (dyn[0], dyn[1],dyni[0], dyni[1], both[0], both[1]))
+#    val1.append(dyn[0])
+#    val2.append(dyni[0])
+#    time1.append(dyn[1])
+#    time2.append(dyni[1])
+#F.close()
 #
 #vall1 = [sum(val1[:D])/D, sum(val1[150:300])/150, sum(val1[300:450])/150, sum(val1[450:600])/150, sum(val1[600:750])/150]
 #vall2 = [sum(val2[:D])/D, sum(val2[150:300])/150, sum(val2[300:450])/150, sum(val2[450:600])/150, sum(val2[600:750])/150]
