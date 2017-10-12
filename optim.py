@@ -104,8 +104,8 @@ def opt(t, n_vehicles, n_customers, n_extra_customers, extra_dict, arr_times, st
     return ret_dict, MP_obj, LP_obj
   
     
-    
-
+#Test code 
+"""
 n_vehicles =         [2]*5   +  [5]*5   + [5]*5
 n_customers =        [10]*5  +  [20]*5  + [15]*5
 n_extra_customers =  [3]*5   +  [5]*5   + [10]*5
@@ -160,4 +160,4 @@ for j in range(len(n_vehicles)):
     F.write("%f | %f | %f\n" % (MP_obj2, LP_obj2,time.time()-start_time))
 
 F.close()
-
+"""
