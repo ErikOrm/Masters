@@ -22,7 +22,7 @@ d = final_dispatcher()
 Then run the simulation (the first arg is whether the insertion heuristic should be used and the second is which method to use for the subproblems):
 
 dyn = mod.simulate(d, ('dynamic_insert','label'))
-or
-dyni = mod.simulate(d, ('dynamic_insert','reinsert'))
-or
-both = mod.simulate(d, ('dynamic_insert', 'both'))
+
+
+['dynamic', 'static', 'dynamic_insert'], ['label', 'reinsert', 'both']
+
